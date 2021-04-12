@@ -11,7 +11,7 @@ import torch.optim as optim
 import numpy as np
 import quadprog
 
-from .common import MLP, ResNet18
+from .common import MLP, ResNet18, ResNet50
 
 # Auxiliary functions useful for GEM's inner optimization.
 
@@ -101,7 +101,8 @@ class Net(nn.Module):
         self.margin = args.memory_strength
         self.is_cifar = (args.data_file == 'cifar100.pt')
         if self.is_cifar:
-            self.net = ResNet18(n_outputs)
+            # self.net = ResNet18(n_outputs)
+            self.net = ResNet50(n_outputs)
         else:
             self.net = MLP([n_inputs] + [nh] * nl + [n_outputs])
 

@@ -37,10 +37,8 @@ class Continuum:
         self.batch_size = args.batch_size
         n_tasks = len(data)
         task_permutation = range(n_tasks)
-
         if args.shuffle_tasks == 'yes':
             task_permutation = torch.randperm(n_tasks).tolist()
-
         sample_permutations = []
 
         for t in range(n_tasks):
@@ -52,17 +50,19 @@ class Continuum:
 
             p = torch.randperm(N)[0:n]
             sample_permutations.append(p)
-
-        self.permutation = []
+        self.permutation = {}
 
         for t in range(n_tasks):
             task_t = task_permutation[t]
             for _ in range(args.n_epochs):
-                task_p = [[task_t, i] for i in sample_permutations[task_t]]
+                task_p = [[i] for i in sample_permutations[task_t]]
                 random.shuffle(task_p)
-                self.permutation += task_p
-
-        self.length = len(self.permutation)
+                if task_t in self.permutation:
+                    self.permutation[task_t] = self.permutation[task_t] + task_p
+                else:
+                    self.permutation[task_t] = task_p
+        self.tmp = list(self.permutation.keys())
+        self.length = len(self.tmp)
         self.current = 0
 
     def __iter__(self):
@@ -75,16 +75,15 @@ class Continuum:
         if self.current >= self.length:
             raise StopIteration
         else:
-            ti = self.permutation[self.current][0]
+            ti = self.tmp[self.current]
             j = []
-            i = 0
-            while (((self.current + i) < self.length) and
-                   (self.permutation[self.current + i][0] == ti) and
-                   (i < self.batch_size)):
-                j.append(self.permutation[self.current + i][1])
-                i += 1
-            self.current += i
-            j = torch.LongTensor(j)
+            temp = self.permutation[ti]
+            j.append(sum(temp[:self.batch_size],[]))
+            if temp[self.batch_size:] != []:
+                self.permutation[ti] = temp[self.batch_size:]
+            else:
+                self.current += 1
+                self.permutation.pop(ti)
             return self.data[ti][1][j], ti, self.data[ti][2][j]
 
 # train handle ###############################################################
